@@ -50,26 +50,36 @@ jobs:
   mysqltest:
     strategy:
       matrix:
-        mysql_version:
-          - 8.0.40
-          - 8.4.3
-    name: Tests with MySQL ${{ matrix.mysql_version }}
+        db:
+          - prod: MySQL
+            image: mysql
+            ver: 8.0.40
+          - prod: MySQL
+            image: mysql
+            ver: 8.4.3
+          - prod: MariaDB
+            image: mariadb
+            ver: 10.5.27
+          - prod: MariaDB
+            image: mariadb
+            ver: 11.4.4
+    name: Tests with ${{matrix.db.prod}} ${{ matrix.db.ver }}
     runs-on: ubuntu-latest
     services:
       mysql:
-        image: mysql:${{ matrix.mysql_version }}
+        image: ${{ matrix.db.image }}:${{ matrix.db.ver }}
         env:
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: --health-cmd="${{ matrix.db.prod == 'MySQL' && 'mysqladmin ping' || 'healthcheck.sh --connect' }}"  --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-      - name: MySQL versions
+      - name: ${{ matrix.db.prod }} versions
         run: |
           echo -n "mysql -v: " ; mysql -V
           echo -n "mysqldump -V: " ; mysqldump -V
-          echo -n "MySQL Server (SELECT VERSION()): " ; mysql -h 127.0.0.1 -u root -BNe 'SELECT VERSION()'
+          echo -n "Server (SELECT VERSION()): " ; mysql -h 127.0.0.1 -u root -BNe 'SELECT VERSION()'
       - name: Prepare for Go
         run: |
           sudo apt-get install -y make gcc
